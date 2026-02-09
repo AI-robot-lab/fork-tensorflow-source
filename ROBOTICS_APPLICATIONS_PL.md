@@ -283,7 +283,7 @@ KROK 5: POTWIERDZENIE
 
 **Funkcje:**
 1. Patrzy na stół i rozpoznaje przedmioty
-2. Reaguje na polecenia: "przynieś telefon", "posprząta"j
+2. Reaguje na polecenia: "przynieś telefon", "posprzątaj"
 3. Nawiguje po pomieszczeniu unikając przeszkód
 4. Manipuluje obiektami
 

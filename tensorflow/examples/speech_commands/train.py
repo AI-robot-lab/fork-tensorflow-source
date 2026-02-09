@@ -12,58 +12,127 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-r"""Simple speech recognition to spot a limited number of keywords.
+r"""
+================================================================================
+TRENING MODELU ROZPOZNAWANIA POLECEŃ GŁOSOWYCH
+Przewodnik dla studentów Politechniki Rzeszowskiej
+================================================================================
 
-This is a self-contained example script that will train a very basic audio
-recognition model in TensorFlow. It downloads the necessary training data and
-runs with reasonable defaults to train within a few hours even only using a CPU.
-For more information, please see
-https://www.tensorflow.org/tutorials/audio/simple_audio.
+OPIS:
+-----
+Ten skrypt trenuje model sieci neuronowej do rozpoznawania krótkich komend
+głosowych. Jest to prosty system rozpoznawania mowy typu "keyword spotting" -
+wykrywa pojedyncze słowa z ograniczonego słownika.
 
-It is intended as an introduction to using neural networks for audio
-recognition, and is not a full speech recognition system. For more advanced
-speech systems, I recommend looking into Kaldi. This network uses a keyword
-detection style to spot discrete words from a small vocabulary, consisting of
-"yes", "no", "up", "down", "left", "right", "on", "off", "stop", and "go".
+CEL:
+----
+Stworzenie modelu, który potrafi rozpoznać komendy dla robota Unitree G1 EDU-U6:
+- "yes" (tak), "no" (nie)
+- "up" (góra), "down" (dół)  
+- "left" (lewo), "right" (prawo)
+- "on" (włącz), "off" (wyłącz)
+- "stop" (stop), "go" (idź)
 
-To run the training process, use:
+ZASTOSOWANIE W ROBOTYCE:
+-------------------------
+Robot może reagować na polecenia głosowe użytkownika:
+- Sterowanie ruchem: "idź", "stop", "lewo", "prawo"
+- Kontrola manipulatora: "podnieś", "połóż"
+- Interakcja: "tak", "nie", "pomoc"
 
-bazel run tensorflow/examples/speech_commands:train
+TO NIE JEST pełny system rozpoznawania mowy!
+- ✓ Potrafi: rozpoznawać pojedyncze, krótkie słowa
+- ✗ NIE potrafi: rozpoznawać pełnych zdań czy transkrybować długich wypowiedzi
+- Dla zaawansowanej mowy polecam: Kaldi, Whisper, Google Cloud Speech-to-Text
 
-This will write out checkpoints to /tmp/speech_commands_train/, and will
-download over 1GB of open source training data, so you'll need enough free space
-and a good internet connection. The default data is a collection of thousands of
-one-second .wav files, each containing one spoken word. Learn more at 
-https://blog.research.google/2017/08/launching-speech-commands-dataset.html.
+JAK URUCHOMIĆ TRENING:
+----------------------
 
-As training progresses, it will print out its accuracy metrics, which should
-rise above 90% by the end. Once it's complete, you can run the freeze script to
-get a binary GraphDef that you can easily deploy on mobile applications.
+1. PODSTAWOWY TRENING (z domyślnymi danymi):
+   
+   bazel run tensorflow/examples/speech_commands:train
 
-If you want to train on your own data, you'll need to create .wavs with your
-recordings, all at a consistent length, and then arrange them into subfolders
-organized by label. For example, here's a possible file structure:
+   LUB bezpośrednio z Pythona:
+   
+   python train.py
 
-my_wavs >
-  up >
-    audio_0.wav
-    audio_1.wav
-  down >
-    audio_2.wav
-    audio_3.wav
-  other>
-    audio_4.wav
-    audio_5.wav
+   To spowoduje:
+   - Pobranie ~1GB danych treningowych Speech Commands Dataset
+   - Trening przez kilka godzin (nawet na CPU)
+   - Zapisanie checkpointów do /tmp/speech_commands_train/
+   - Osiągnięcie accuracy >90%
 
-You'll also need to tell the script what labels to look for, using the
-`--wanted_words` argument. In this case, 'up,down' might be what you want, and
-the audio in the 'other' folder would be used to train an 'unknown' category.
+2. TRENING NA WŁASNYCH DANYCH (np. polskie komendy):
+   
+   Przygotuj strukturę katalogów z nagraniami WAV (1 sekunda, 16kHz):
+   
+   moje_nagrania/
+     idz/                <- Polecenie "idź"
+       nagranie001.wav
+       nagranie002.wav
+     stop/               <- Polecenie "stop"
+       nagranie101.wav
+       nagranie102.wav
+     lewo/               <- Polecenie "lewo"
+       ...
+     prawo/              <- Polecenie "prawo"
+       ...
+     inne/               <- Inne dźwięki (dla kategorii "unknown")
+       ...
 
-To pull this all together, you'd run:
+   Następnie uruchom:
+   
+   bazel run tensorflow/examples/speech_commands:train -- \
+     --data_dir=moje_nagrania \
+     --wanted_words=idz,stop,lewo,prawo
 
-bazel run tensorflow/examples/speech_commands:train -- \
---data_dir=my_wavs --wanted_words=up,down
+   LUB:
+   
+   python train.py \
+     --data_dir=moje_nagrania \
+     --wanted_words=idz,stop,lewo,prawo
 
+WYMAGANIA DLA NAGRAŃ:
+---------------------
+- Format: WAV, 16-bit PCM
+- Częstotliwość: 16000 Hz (16 kHz)
+- Długość: dokładnie 1 sekunda
+- Kanały: mono (1 kanał)
+- Minimalna ilość: 100+ nagrań na każde słowo
+- Różnorodność: różni mówcy, różne warunki akustyczne
+
+PARAMETRY TRENINGU:
+-------------------
+Możesz dostosować proces treningu używając argumentów:
+
+--how_many_training_steps: Liczba kroków treningu (domyślnie 15000,3000)
+--learning_rate: Szybkość uczenia (domyślnie 0.001,0.0001)
+--batch_size: Rozmiar batcha (domyślnie 100)
+--model_architecture: Architektura sieci ('conv', 'low_latency_conv', etc.)
+
+PRZYKŁAD z wszystkimi parametrami:
+
+python train.py \
+  --data_dir=moje_nagrania \
+  --wanted_words=idz,stop,lewo,prawo \
+  --train_dir=/tmp/moj_model \
+  --how_many_training_steps=10000,2000 \
+  --learning_rate=0.001,0.0001 \
+  --batch_size=100 \
+  --model_architecture=conv
+
+KOLEJNE KROKI:
+--------------
+1. Po treningu użyj freeze.py aby stworzyć produkcyjny model
+2. Przetestuj model używając label_wav.py
+3. Wdróż model na robocie Unitree G1 EDU-U6
+
+Więcej informacji:
+- Tutorial: https://www.tensorflow.org/tutorials/audio/simple_audio
+- Dataset: https://blog.research.google/2017/08/launching-speech-commands-dataset.html
+- Dokumentacja PL: README_PL.md
+
+================================================================================
 """
 import argparse
 import os.path
